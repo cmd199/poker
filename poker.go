@@ -19,10 +19,10 @@ type Input struct {
 type Hand struct {
 	RequetID      string `json:"requestId"`
 	Hand          string `json:"hand"`
-	Cards         []Card `json:"-"`
 	EvaluatedHand string `json:"yaku"`
-	Point         int    `json:"-"`
 	Strongest     bool   `json:"strongest"`
+	Cards         []Card `json:"-"`
+	Point         int    `json:"-"`
 	StrongestRank int    `json:"-"`
 }
 
@@ -32,14 +32,20 @@ type Card struct {
 }
 
 type Error struct {
-	RequetID     string `json:"requestId"`
+	RequestID    string `json:"requestId"`
 	Hand         string `json:"hand"`
 	ErrorMessage string `json:"errorMessage"`
 }
 
+type Response struct {
+	Results []Hand  `json:"results"`
+	Errors  []Error `json:"errors"`
+}
+
 const (
-	UnableRead    = "読み込めません"
+	Unreadable    = "読み込めません"
 	InvalidFormat = "不正なフォーマットです"
+	InvalidCards  = "カードは5枚で入力してください"
 )
 
 func main() {
@@ -51,14 +57,14 @@ func main() {
 func hdl(c echo.Context) error {
 
 	// リクエストボディの読み取り
+	var errors []Error
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		errors := []Error{
+		errors = []Error{
 			{
-				RequetID:     UnableRead,
-				Hand:         UnableRead,
-				ErrorMessage: InvalidFormat,
-			},
+				RequestID:    Unreadable,
+				Hand:         Unreadable,
+				ErrorMessage: InvalidFormat},
 		}
 		return c.JSON(http.StatusBadRequest, map[string][]Error{
 			"errors": errors,
@@ -66,14 +72,13 @@ func hdl(c echo.Context) error {
 	}
 
 	// JSONを構造体にデコードする
-	var hands_from_json Input
-	if err := json.Unmarshal(body, &hands_from_json); err != nil {
-		errors := []Error{
+	var hands Input
+	if err := json.Unmarshal(body, &hands); err != nil {
+		errors = []Error{
 			{
-				RequetID:     UnableRead,
-				Hand:         UnableRead,
-				ErrorMessage: InvalidFormat,
-			},
+				RequestID:    Unreadable,
+				Hand:         Unreadable,
+				ErrorMessage: InvalidFormat},
 		}
 		return c.JSON(http.StatusBadRequest, map[string][]Error{
 			"errors": errors,
@@ -81,16 +86,24 @@ func hdl(c echo.Context) error {
 	}
 
 	// 手札の受け取り処理
-	hand := make([]Hand, len(hands_from_json.Hands))
+	hand := make([]Hand, len(hands.Hands))
 	for i := 0; i < len(hand); i++ {
 		// IDの付与
 		hand[i].RequetID = fmt.Sprintf("01-00002-%02d", i+1)
 
 		// 手札の受け取り
-		hand[i].Hand = hands_from_json.Hands[i]
+		hand[i].Hand = hands.Hands[i]
 
 		// 手札をカード配列に分割
 		cards := strings.Split(hand[i].Hand, ", ")
+		if len(cards) != 5 {
+			errors = []Error{
+				{
+					RequestID:    hand[i].RequetID,
+					Hand:         hand[i].Hand,
+					ErrorMessage: InvalidCards},
+			}
+		}
 
 		// スーツとランクの受け取り
 		hand[i].Cards = make([]Card, len(cards))
@@ -138,8 +151,9 @@ func hdl(c echo.Context) error {
 	}
 
 	fmt.Printf("%s\n", results)
-	return c.JSON(http.StatusOK, map[string][]Hand{
-		"results": hand,
+	return c.JSON(http.StatusOK, Response{
+		Results: hand,
+		Errors:  errors,
 	})
 }
 
