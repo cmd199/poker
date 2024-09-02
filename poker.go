@@ -38,6 +38,7 @@ type Error struct {
 }
 
 const (
+	UnableRead    = "読み込めません"
 	InvalidFormat = "不正なフォーマットです"
 )
 
@@ -53,7 +54,11 @@ func hdl(c echo.Context) error {
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
 		errors := []Error{
-			{ErrorMessage: InvalidFormat},
+			{
+				RequetID:     UnableRead,
+				Hand:         UnableRead,
+				ErrorMessage: InvalidFormat,
+			},
 		}
 		return c.JSON(http.StatusBadRequest, map[string][]Error{
 			"errors": errors,
@@ -64,7 +69,11 @@ func hdl(c echo.Context) error {
 	var hands_from_json Input
 	if err := json.Unmarshal(body, &hands_from_json); err != nil {
 		errors := []Error{
-			{ErrorMessage: InvalidFormat},
+			{
+				RequetID:     UnableRead,
+				Hand:         UnableRead,
+				ErrorMessage: InvalidFormat,
+			},
 		}
 		return c.JSON(http.StatusBadRequest, map[string][]Error{
 			"errors": errors,
