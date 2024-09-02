@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"slices"
 	"strconv"
@@ -12,7 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type Input struct {
+type Request struct {
 	Hands []string `json:"hands"`
 }
 
@@ -56,53 +54,30 @@ func main() {
 
 func hdl(c echo.Context) error {
 
-	// リクエストボディの読み取り
-	var errors []Error
-	body, err := io.ReadAll(c.Request().Body)
-	if err != nil {
-		errors = []Error{
-			{
-				RequestID:    Unreadable,
-				Hand:         Unreadable,
-				ErrorMessage: InvalidFormat},
-		}
-		return c.JSON(http.StatusBadRequest, map[string][]Error{
-			"errors": errors,
-		})
-	}
-
-	// JSONを構造体にデコードする
-	var hands Input
-	if err := json.Unmarshal(body, &hands); err != nil {
-		errors = []Error{
-			{
-				RequestID:    Unreadable,
-				Hand:         Unreadable,
-				ErrorMessage: InvalidFormat},
-		}
-		return c.JSON(http.StatusBadRequest, map[string][]Error{
-			"errors": errors,
-		})
+	req := new(Request)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "読み込めません"})
 	}
 
 	// 手札の受け取り処理
-	hand := make([]Hand, len(hands.Hands))
+	var errors []Error
+	hand := make([]Hand, len(req.Hands))
 	for i := 0; i < len(hand); i++ {
 		// IDの付与
 		hand[i].RequetID = fmt.Sprintf("01-00002-%02d", i+1)
 
 		// 手札の受け取り
-		hand[i].Hand = hands.Hands[i]
+		hand[i].Hand = req.Hands[i]
 
 		// 手札をカード配列に分割
 		cards := strings.Split(hand[i].Hand, ", ")
 		if len(cards) != 5 {
-			errors = []Error{
-				{
-					RequestID:    hand[i].RequetID,
-					Hand:         hand[i].Hand,
-					ErrorMessage: InvalidCards},
-			}
+			errors = append(errors, Error{
+				RequestID:    hand[i].RequetID,
+				Hand:         hand[i].Hand,
+				ErrorMessage: InvalidCards,
+			})
+			continue
 		}
 
 		// スーツとランクの受け取り
@@ -145,12 +120,6 @@ func hdl(c echo.Context) error {
 	}
 
 	// 構造体をJSONにエンコードする
-	results, err := json.Marshal(hand)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("%s\n", results)
 	return c.JSON(http.StatusOK, Response{
 		Results: hand,
 		Errors:  errors,
