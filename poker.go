@@ -31,6 +31,16 @@ type Card struct {
 	Rank int
 }
 
+type Error struct {
+	RequetID     string `json:"requestId"`
+	Hand         string `json:"hand"`
+	ErrorMessage string `json:"errorMessage"`
+}
+
+const (
+	InvalidFormat = "不正なフォーマットです"
+)
+
 func main() {
 	e := echo.New()
 	e.POST("/", hdl)
@@ -42,16 +52,22 @@ func hdl(c echo.Context) error {
 	// リクエストボディの読み取り
 	body, err := io.ReadAll(c.Request().Body)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "不正なフォーマットです。",
+		errors := []Error{
+			{ErrorMessage: InvalidFormat},
+		}
+		return c.JSON(http.StatusBadRequest, map[string][]Error{
+			"errors": errors,
 		})
 	}
 
 	// JSONを構造体にデコードする
 	var hands_from_json Input
 	if err := json.Unmarshal(body, &hands_from_json); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"message": "不正なフォーマットです。",
+		errors := []Error{
+			{ErrorMessage: InvalidFormat},
+		}
+		return c.JSON(http.StatusBadRequest, map[string][]Error{
+			"errors": errors,
 		})
 	}
 
