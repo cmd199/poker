@@ -60,54 +60,57 @@ func hdl(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": "読み込めません"})
 	}
 
+	fmt.Println(req.Hands)
+	fmt.Println(len(req.Hands))
+
 	// 役の判定
 	var errors []Error
 	var strongest_point int
 	var index_strongest_hands []int
 	var strongest_rank []int
 	var correct_hand []Hand
-	hand := make([]Hand, len(req.Hands))
-	for i := 0; i < len(hand); i++ {
-		// IDの付与
-		hand[i].RequetID = fmt.Sprintf("01-00002-%02d", i+1)
 
-		// 手札の受け取り
-		hand[i].Hand = req.Hands[i]
+	for i := 0; i < len(req.Hands); i++ {
+		hand := Hand{
+			RequetID: fmt.Sprintf("01-00002-%02d", i+1),
+			Hand:     req.Hands[i],
+		}
 
 		// 手札をカード配列に分割
-		cards := strings.Split(hand[i].Hand, ", ")
+		cards := strings.Split(hand.Hand, ", ")
 		if len(cards) != 5 {
 			errors = append(errors, Error{
-				RequestID:    hand[i].RequetID,
-				Hand:         hand[i].Hand,
+				RequestID:    hand.RequetID,
+				Hand:         hand.Hand,
 				ErrorMessage: InvalidCards,
 			})
 			continue
 		}
 
 		// スーツとランクの受け取り
-		hand[i].Cards = make([]Card, len(cards))
+		hand.Cards = make([]Card, len(cards))
 		for j, card := range cards {
 			suit_rank := strings.SplitN(card, "", 2)
-			hand[i].Cards[j].Suit = suit_rank[0]
-			hand[i].Cards[j].Rank, _ = strconv.Atoi(suit_rank[1])
+			hand.Cards[j].Suit = suit_rank[0]
+			hand.Cards[j].Rank, _ = strconv.Atoi(suit_rank[1])
 		}
+		fmt.Println(hand.Cards)
 
 		// 役判定
-		hand[i].EvaluatedHand = evaluateCards(hand[i].Cards)
-		hand[i].Point = givePoint(hand[i].EvaluatedHand)
+		hand.EvaluatedHand = evaluateCards(hand.Cards)
+		hand.Point = givePoint(hand.EvaluatedHand)
 
 		// 最も強い役のインデックスを収集
-		if hand[i].Point == strongest_point {
+		if hand.Point == strongest_point {
 			index_strongest_hands = append(index_strongest_hands, i)
-			strongest_rank = append(strongest_rank, getStrongestRank(getRanks(hand[i].Cards), hand[i].Point))
-		} else if strongest_point < hand[i].Point {
-			strongest_point = hand[i].Point
+			strongest_rank = append(strongest_rank, getStrongestRank(getRanks(hand.Cards), hand.Point))
+		} else if strongest_point < hand.Point {
+			strongest_point = hand.Point
 			index_strongest_hands = []int{i}
-			strongest_rank = []int{getStrongestRank(getRanks(hand[i].Cards), hand[i].Point)}
+			strongest_rank = []int{getStrongestRank(getRanks(hand.Cards), hand.Point)}
 		}
 
-		correct_hand = append(correct_hand, hand[i])
+		correct_hand = append(correct_hand, hand)
 
 	}
 
