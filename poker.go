@@ -44,9 +44,10 @@ type Card struct {
 const (
 	InvalidFormat    = "不正なフォーマットです"
 	InvalidCardsSize = "手札は5枚入力してください"
-	InvalidSuit      = "スーツはs, k, d, hのみ有効です"
-	InvalidRank      = "ランクは1〜13の自然数のみ有効です"
+	InvalidCards     = "不正なカードが含まれています"
 	InvalidRankSize  = "同じランクのカードは最大で4枚までです"
+	// InvalidSuit      = "スーツはs, k, d, hのみ有効です"
+	// InvalidRank      = "ランクは1〜13の自然数のみ有効です"
 )
 
 func main() {
@@ -92,7 +93,6 @@ func hdl(c echo.Context) error {
 		for j, card := range cards {
 			hand.Cards[j].Suit = string(card[0])
 			hand.Cards[j].Rank, _ = strconv.Atoi(card[1:])
-
 		}
 
 		// 役判定
@@ -188,16 +188,18 @@ func groupRanks(ranks []int) [][]int {
 func evaluateCards(cards []Card) (string, error) {
 	suits := getSuits(cards)
 	ranks := getRanks(cards)
+
+	for i := 0; i < len(cards); i++ {
+		if !(suits[i] == "s" || suits[i] == "k" || suits[i] == "d" || suits[i] == "h") {
+			return "", errors.New(InvalidCards)
+		}
+		if ranks[i] < 1 || ranks[i] > 13 {
+			return "", errors.New(InvalidCards)
+		}
+	}
+
 	unique_ranks := makeUniqueRanks(ranks)
 	grouped_ranks := groupRanks(ranks)
-
-	if len(suits) != 5 {
-		return "", errors.New(InvalidSuit)
-	}
-
-	if len(ranks) != 5 {
-		return "", errors.New(InvalidRank)
-	}
 
 	switch len(unique_ranks) {
 	case 5:
