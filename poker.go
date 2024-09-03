@@ -57,7 +57,7 @@ func hdl(c echo.Context) error {
 
 	req := new(Request)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": "読み込めません"})
 	}
 
 	// 役の判定
@@ -65,7 +65,7 @@ func hdl(c echo.Context) error {
 	var strongest_point int
 	var index_strongest_hands []int
 	var strongest_rank []int
-	var results []Hand
+	var correct_hand []Hand
 	hand := make([]Hand, len(req.Hands))
 	for i := 0; i < len(hand); i++ {
 		// IDの付与
@@ -107,7 +107,7 @@ func hdl(c echo.Context) error {
 			strongest_rank = []int{getStrongestRank(getRanks(hand[i].Cards), hand[i].Point)}
 		}
 
-		results = append(results, hand[i])
+		correct_hand = append(correct_hand, hand[i])
 
 	}
 
@@ -115,15 +115,14 @@ func hdl(c echo.Context) error {
 	for i := 0; i < len(index_strongest_hands); i++ {
 		hand_index := index_strongest_hands[i]
 		if strongest_rank[i] == slices.Max(strongest_rank) {
-			hand[hand_index].Strongest = true
+			correct_hand[hand_index].Strongest = true
 		} else {
-			hand[hand_index].Strongest = false
+			correct_hand[hand_index].Strongest = false
 		}
 	}
 
-	// 構造体をJSONにエンコードする
 	return c.JSON(http.StatusOK, Response{
-		Results: results,
+		Results: correct_hand,
 		Errors:  errors,
 	})
 }
