@@ -24,11 +24,6 @@ type Hand struct {
 	StrongestRank int    `json:"-"`
 }
 
-type Card struct {
-	Suit string
-	Rank int
-}
-
 type Error struct {
 	RequestID    string `json:"requestId"`
 	Hand         string `json:"hand"`
@@ -40,10 +35,16 @@ type Response struct {
 	Errors  []Error `json:"errors"`
 }
 
+type Card struct {
+	Suit string
+	Rank int
+}
+
 const (
-	Unreadable    = "読み込めません"
 	InvalidFormat = "不正なフォーマットです"
 	InvalidCards  = "カードは5枚で入力してください"
+	InvalidSuit   = "スーツはs, k, h, dで入力してください"
+	InvalidRand   = "ランクは1〜13で入力してください"
 )
 
 func main() {
@@ -56,11 +57,15 @@ func hdl(c echo.Context) error {
 
 	req := new(Request)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "読み込めません"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
 	}
 
-	// 手札の受け取り処理
+	// 役の判定
 	var errors []Error
+	var strongest_point int
+	var index_strongest_hands []int
+	var strongest_rank []int
+	var results []Hand
 	hand := make([]Hand, len(req.Hands))
 	for i := 0; i < len(hand); i++ {
 		// IDの付与
@@ -87,13 +92,7 @@ func hdl(c echo.Context) error {
 			hand[i].Cards[j].Suit = suit_rank[0]
 			hand[i].Cards[j].Rank, _ = strconv.Atoi(suit_rank[1])
 		}
-	}
 
-	// 役判定処理
-	var strongest_point int
-	var index_strongest_hands []int
-	var strongest_rank []int
-	for i := 0; i < len(hand); i++ {
 		// 役判定
 		hand[i].EvaluatedHand = evaluateCards(hand[i].Cards)
 		hand[i].Point = givePoint(hand[i].EvaluatedHand)
@@ -107,6 +106,9 @@ func hdl(c echo.Context) error {
 			index_strongest_hands = []int{i}
 			strongest_rank = []int{getStrongestRank(getRanks(hand[i].Cards), hand[i].Point)}
 		}
+
+		results = append(results, hand[i])
+
 	}
 
 	// 強さ判定処理
@@ -121,7 +123,7 @@ func hdl(c echo.Context) error {
 
 	// 構造体をJSONにエンコードする
 	return c.JSON(http.StatusOK, Response{
-		Results: hand,
+		Results: results,
 		Errors:  errors,
 	})
 }
