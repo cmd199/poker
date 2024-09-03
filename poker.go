@@ -44,7 +44,7 @@ const (
 	InvalidFormat = "不正なフォーマットです"
 	InvalidCards  = "カードは5枚で入力してください"
 	InvalidSuit   = "スーツはs, k, h, dで入力してください"
-	InvalidRand   = "ランクは1〜13で入力してください"
+	InvalidRank   = "ランクは1〜13で入力してください"
 )
 
 func main() {
@@ -100,11 +100,11 @@ func hdl(c echo.Context) error {
 		// 最も強い役のインデックスを収集
 		if hand.Point == strongest_point {
 			index_strongest_hands = append(index_strongest_hands, len(correct_hand))
-			strongest_rank = append(strongest_rank, getStrongestRank(getRanks(hand.Cards), hand.Point))
+			strongest_rank = append(strongest_rank, getStrongestRank(hand.Cards, hand.Point))
 		} else if strongest_point < hand.Point {
 			strongest_point = hand.Point
 			index_strongest_hands = []int{len(correct_hand)}
-			strongest_rank = []int{getStrongestRank(getRanks(hand.Cards), hand.Point)}
+			strongest_rank = []int{getStrongestRank(hand.Cards, hand.Point)}
 		}
 
 		correct_hand = append(correct_hand, hand)
@@ -278,8 +278,9 @@ func givePoint(evaluated_hand string) int {
 	return 1
 }
 
-func getStrongestRank(ranks []int, strongest_point int) int {
+func getStrongestRank(cards []Card, strongest_point int) int {
 	var strongest_rank int
+	ranks := getRanks(cards)
 	grouped_ranks := groupRanks(ranks)
 
 	switch strongest_point {
