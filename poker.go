@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -41,10 +42,11 @@ type Card struct {
 }
 
 const (
-	InvalidFormat = "不正なフォーマットです"
-	InvalidCards  = "カードは5枚で入力してください"
-	InvalidSuit   = "スーツはs, k, h, dで入力してください"
-	InvalidRank   = "ランクは1〜13で入力してください"
+	InvalidFormat    = "不正なフォーマットです"
+	InvalidCardsSize = "手札は5枚入力してください"
+	InvalidSuit      = "スーツはs, k, d, hのみ有効です"
+	InvalidRank      = "ランクは1〜13の自然数のみ有効です"
+	InvalidRankSize  = "同じランクのカードは最大で4枚までです"
 )
 
 func main() {
@@ -57,16 +59,16 @@ func hdl(c echo.Context) error {
 
 	req := new(Request)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": "読み込めません"})
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
 	}
 
-	// 役の判定
 	var errors []Error
 	var strongest_point int
 	var index_strongest_hands []int
 	var strongest_rank []int
 	var correct_hand []Hand
 
+	// 役の判定
 	for i := 0; i < len(req.Hands); i++ {
 		// IDと手札の割り振り
 		hand := Hand{
@@ -80,7 +82,7 @@ func hdl(c echo.Context) error {
 			errors = append(errors, Error{
 				RequestId:    hand.RequetId,
 				Hand:         hand.Hand,
-				ErrorMessage: InvalidCards,
+				ErrorMessage: InvalidCardsSize,
 			})
 			continue
 		}
@@ -88,13 +90,23 @@ func hdl(c echo.Context) error {
 		// スーツとランクの受け取り
 		hand.Cards = make([]Card, len(cards))
 		for j, card := range cards {
-			suit_rank := strings.SplitN(card, "", 2)
-			hand.Cards[j].Suit = suit_rank[0]
-			hand.Cards[j].Rank, _ = strconv.Atoi(suit_rank[1])
+			hand.Cards[j].Suit = string(card[0])
+			hand.Cards[j].Rank, _ = strconv.Atoi(card[1:])
+
 		}
 
 		// 役判定
-		hand.EvaluatedHand = evaluateCards(hand.Cards)
+		evaluated_hand, err := evaluateCards(hand.Cards)
+		if err != nil {
+			errors = append(errors, Error{
+				RequestId:    hand.RequetId,
+				Hand:         hand.Hand,
+				ErrorMessage: err.Error(),
+			})
+			continue
+		}
+
+		hand.EvaluatedHand = evaluated_hand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
 		// 最も強い役のインデックスを収集
@@ -108,10 +120,9 @@ func hdl(c echo.Context) error {
 		}
 
 		correct_hand = append(correct_hand, hand)
-
 	}
 
-	// 強さ判定処理
+	// 強さ判定
 	for i := 0; i < len(index_strongest_hands); i++ {
 		hand_index := index_strongest_hands[i]
 		if strongest_rank[i] == slices.Max(strongest_rank) {
@@ -174,41 +185,52 @@ func groupRanks(ranks []int) [][]int {
 	return grouped_ranks
 }
 
-func evaluateCards(cards []Card) string {
+func evaluateCards(cards []Card) (string, error) {
 	suits := getSuits(cards)
 	ranks := getRanks(cards)
 	unique_ranks := makeUniqueRanks(ranks)
 	grouped_ranks := groupRanks(ranks)
 
+	if len(suits) != 5 {
+		return "", errors.New(InvalidSuit)
+	}
+
+	if len(ranks) != 5 {
+		return "", errors.New(InvalidRank)
+	}
+
 	switch len(unique_ranks) {
 	case 5:
 		if isRoyalStraightFlush(suits, ranks) {
-			return "ロイヤルストレートフラッシュ"
+			return "ロイヤルストレートフラッシュ", nil
 		} else if isStraightFlush(suits, ranks) {
-			return "ストレートフラッシュ"
+			return "ストレートフラッシュ", nil
 		} else if isSingleSuits(suits) {
-			return "フラッシュ"
+			return "フラッシュ", nil
 		} else if isStraight(ranks) || isRoyalStraight(ranks) {
-			return "ストレート"
+			return "ストレート", nil
 		} else {
-			return "ハイカード"
+			return "ハイカード", nil
 		}
 	case 4:
-		return "ワンペア"
+		return "ワンペア", nil
 	case 3:
 		if len(grouped_ranks[0]) == 3 || len(grouped_ranks[1]) == 3 || len(grouped_ranks[2]) == 3 {
-			return "スリーカード"
+			return "スリーカード", nil
 		} else if len(grouped_ranks[0]) == 2 || len(grouped_ranks[1]) == 2 || len(grouped_ranks[2]) == 2 {
-			return "ツーペア"
+			return "ツーペア", nil
 		}
 	case 2:
 		if len(grouped_ranks[0]) == 4 || len(grouped_ranks[1]) == 4 {
-			return "フォーカード"
+			return "フォーカード", nil
 		} else if len(grouped_ranks[0]) == 3 || len(grouped_ranks[1]) == 3 {
-			return "フルハウス"
+			return "フルハウス", nil
 		}
+	case 1:
+		return "", errors.New(InvalidRankSize)
 	}
-	return "ハイカード"
+
+	return "ハイカード", nil
 }
 
 func isRoyalStraightFlush(suits []string, ranks []int) bool {
