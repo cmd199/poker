@@ -15,7 +15,7 @@ type Request struct {
 }
 
 type Hand struct {
-	RequetID      string `json:"requestId"`
+	RequetId      string `json:"requestId"`
 	Hand          string `json:"hand"`
 	EvaluatedHand string `json:"yaku"`
 	Strongest     bool   `json:"strongest"`
@@ -25,7 +25,7 @@ type Hand struct {
 }
 
 type Error struct {
-	RequestID    string `json:"requestId"`
+	RequestId    string `json:"requestId"`
 	Hand         string `json:"hand"`
 	ErrorMessage string `json:"errorMessage"`
 }
@@ -60,9 +60,6 @@ func hdl(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": "読み込めません"})
 	}
 
-	fmt.Println(req.Hands)
-	fmt.Println(len(req.Hands))
-
 	// 役の判定
 	var errors []Error
 	var strongest_point int
@@ -71,8 +68,9 @@ func hdl(c echo.Context) error {
 	var correct_hand []Hand
 
 	for i := 0; i < len(req.Hands); i++ {
+		// IDと手札の割り振り
 		hand := Hand{
-			RequetID: fmt.Sprintf("01-00002-%02d", i+1),
+			RequetId: fmt.Sprintf("01-00002-%02d", i+1),
 			Hand:     req.Hands[i],
 		}
 
@@ -80,7 +78,7 @@ func hdl(c echo.Context) error {
 		cards := strings.Split(hand.Hand, ", ")
 		if len(cards) != 5 {
 			errors = append(errors, Error{
-				RequestID:    hand.RequetID,
+				RequestId:    hand.RequetId,
 				Hand:         hand.Hand,
 				ErrorMessage: InvalidCards,
 			})
@@ -94,7 +92,6 @@ func hdl(c echo.Context) error {
 			hand.Cards[j].Suit = suit_rank[0]
 			hand.Cards[j].Rank, _ = strconv.Atoi(suit_rank[1])
 		}
-		fmt.Println(hand.Cards)
 
 		// 役判定
 		hand.EvaluatedHand = evaluateCards(hand.Cards)
@@ -102,11 +99,11 @@ func hdl(c echo.Context) error {
 
 		// 最も強い役のインデックスを収集
 		if hand.Point == strongest_point {
-			index_strongest_hands = append(index_strongest_hands, i)
+			index_strongest_hands = append(index_strongest_hands, len(correct_hand))
 			strongest_rank = append(strongest_rank, getStrongestRank(getRanks(hand.Cards), hand.Point))
 		} else if strongest_point < hand.Point {
 			strongest_point = hand.Point
-			index_strongest_hands = []int{i}
+			index_strongest_hands = []int{len(correct_hand)}
 			strongest_rank = []int{getStrongestRank(getRanks(hand.Cards), hand.Point)}
 		}
 
