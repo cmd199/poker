@@ -186,6 +186,11 @@ func groupRanks(ranks []int) [][]int {
 }
 
 func evaluateHand(cards []Card) (string, error) {
+
+	if len(cards) < 5 {
+		return "", errors.New(InvalidCardsSize)
+	}
+
 	suits := getSuits(cards)
 	ranks := getRanks(cards)
 
