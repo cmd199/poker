@@ -96,7 +96,7 @@ func hdl(c echo.Context) error {
 		}
 
 		// 役判定
-		evaluated_hand, err := evaluateCards(hand.Cards)
+		evaluated_hand, err := evaluateHand(hand.Cards)
 		if err != nil {
 			errors = append(errors, Error{
 				RequestId:    hand.RequetId,
@@ -185,7 +185,7 @@ func groupRanks(ranks []int) [][]int {
 	return grouped_ranks
 }
 
-func evaluateCards(cards []Card) (string, error) {
+func evaluateHand(cards []Card) (string, error) {
 	suits := getSuits(cards)
 	ranks := getRanks(cards)
 
