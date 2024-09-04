@@ -79,14 +79,6 @@ func hdl(c echo.Context) error {
 
 		// 手札をカード配列に分割
 		cards := strings.Split(hand.Hand, ", ")
-		if len(cards) != 5 {
-			errors = append(errors, Error{
-				RequestId:    hand.RequetId,
-				Hand:         hand.Hand,
-				ErrorMessage: InvalidHandLength,
-			})
-			continue
-		}
 
 		// スーツとランクの受け取り
 		hand.Cards = make([]Card, len(cards))
@@ -188,6 +180,11 @@ func groupRanks(ranks []int) [][]int {
 }
 
 func evaluateHand(cards []Card) (string, error) {
+
+	if len(cards) != 5 {
+		return "", errors.New(InvalidHandLength)
+	}
+
 	suits := getSuits(cards)
 	ranks := getRanks(cards)
 
