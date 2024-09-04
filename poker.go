@@ -46,8 +46,7 @@ const (
 	InvalidHandLength = "手札は5枚入力してください"
 	InvalidCard       = "不正なカードが含まれています"
 	InvalidSameRank   = "同じランクのカードは最大で4枚までです"
-	// InvalidSuit      = "スーツはs, k, d, hのみ有効です"
-	// InvalidRank      = "ランクは1〜13の自然数のみ有効です"
+	InvalidSameCards  = "同じカードを2回以上入力しています"
 )
 
 func main() {
@@ -183,6 +182,9 @@ func evaluateHand(cards []Card) (string, error) {
 
 	if len(cards) != 5 {
 		return "", errors.New(InvalidHandLength)
+	}
+	if checkDuplication(cards) {
+		return "", errors.New(InvalidSameCards)
 	}
 
 	suits := getSuits(cards)
@@ -406,6 +408,14 @@ func getStrongestRank(cards []Card, strongest_point int) int {
 	return strongest_rank
 }
 
-// func checkDuplication(cards []Card) bool {
-// 	return
-// }
+func checkDuplication(cards []Card) bool {
+	m := make(map[Card]bool)
+	for _, card := range cards {
+		if m[card] {
+			return true
+		}
+		m[card] = true
+	}
+
+	return false
+}
