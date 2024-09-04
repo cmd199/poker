@@ -42,10 +42,10 @@ type Card struct {
 }
 
 const (
-	InvalidFormat    = "不正なフォーマットです"
-	InvalidCardsSize = "手札は5枚入力してください"
-	InvalidCards     = "不正なカードが含まれています"
-	InvalidRankSize  = "同じランクのカードは最大で4枚までです"
+	InvalidFormat     = "不正なフォーマットです"
+	InvalidHandLength = "手札は5枚入力してください"
+	InvalidCard       = "不正なカードが含まれています"
+	InvalidSameRank   = "同じランクのカードは最大で4枚までです"
 	// InvalidSuit      = "スーツはs, k, d, hのみ有効です"
 	// InvalidRank      = "ランクは1〜13の自然数のみ有効です"
 )
@@ -83,7 +83,7 @@ func hdl(c echo.Context) error {
 			errors = append(errors, Error{
 				RequestId:    hand.RequetId,
 				Hand:         hand.Hand,
-				ErrorMessage: InvalidCardsSize,
+				ErrorMessage: InvalidHandLength,
 			})
 			continue
 		}
@@ -91,8 +91,10 @@ func hdl(c echo.Context) error {
 		// スーツとランクの受け取り
 		hand.Cards = make([]Card, len(cards))
 		for j, card := range cards {
-			hand.Cards[j].Suit = string(card[0])
-			hand.Cards[j].Rank, _ = strconv.Atoi(card[1:])
+			if card != "" {
+				hand.Cards[j].Suit = string(card[0])
+				hand.Cards[j].Rank, _ = strconv.Atoi(card[1:])
+			}
 		}
 
 		// 役判定
@@ -186,20 +188,18 @@ func groupRanks(ranks []int) [][]int {
 }
 
 func evaluateHand(cards []Card) (string, error) {
-
-	if len(cards) < 5 {
-		return "", errors.New(InvalidCardsSize)
-	}
-
 	suits := getSuits(cards)
 	ranks := getRanks(cards)
 
 	for i := 0; i < len(cards); i++ {
-		if !(suits[i] == "s" || suits[i] == "k" || suits[i] == "d" || suits[i] == "h") {
-			return "", errors.New(InvalidCards)
+		if suits[i] == "" {
+			return "", errors.New(InvalidHandLength)
 		}
-		if ranks[i] < 1 || ranks[i] > 13 {
-			return "", errors.New(InvalidCards)
+		if !(suits[i] == "s" || suits[i] == "k" || suits[i] == "d" || suits[i] == "h") {
+			return "", errors.New(InvalidCard)
+		}
+		if !(1 <= ranks[i] && ranks[i] <= 13) {
+			return "", errors.New(InvalidCard)
 		}
 	}
 
@@ -234,7 +234,7 @@ func evaluateHand(cards []Card) (string, error) {
 			return "フルハウス", nil
 		}
 	case 1:
-		return "", errors.New(InvalidRankSize)
+		return "", errors.New(InvalidSameRank)
 	}
 
 	return "ハイカード", nil
@@ -408,3 +408,7 @@ func getStrongestRank(cards []Card, strongest_point int) int {
 
 	return strongest_rank
 }
+
+// func checkDuplication(cards []Card) bool {
+// 	return
+// }
