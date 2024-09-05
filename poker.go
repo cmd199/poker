@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"net/http"
@@ -9,7 +10,26 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	_ "github.com/lib/pq"
 )
+
+var Db *sql.DB
+
+func init() {
+	var err error
+	Db, err = sql.Open("postgres", "user=gwp dbname=gwp password=gwp sslmode=disable")
+	if err != nil {
+		panic(err)
+	}
+
+	err = Db.Ping()
+	if err != nil {
+		fmt.Println("接続失敗")
+		return
+	} else {
+		fmt.Println("接続成功")
+	}
+}
 
 type Request struct {
 	Hands []string `json:"hands"`
