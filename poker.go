@@ -17,7 +17,7 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("postgres", "user=gwp dbname=gwp password=gwp sslmode=disable")
+	Db, err = sql.Open("postgres", "user=hoge dbname=hand_request password=hoge sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -62,11 +62,12 @@ type Card struct {
 }
 
 const (
-	InvalidFormat     = "不正なフォーマットです"
-	InvalidHandLength = "手札は5枚入力してください"
-	InvalidCard       = "不正なカードが含まれています"
-	InvalidSameRank   = "同じランクのカードは最大で4枚までです"
-	InvalidSameCards  = "同じカードを2回以上入力しています"
+	InvalidFormat       = "不正なフォーマットです"
+	InvalidHandLength   = "手札は5枚入力してください"
+	InvalidCard         = "不正なカードが含まれています"
+	InvalidSameRank     = "同じランクのカードは最大で4枚までです"
+	InvalidSameCards    = "同じカードを2回以上入力しています"
+	InternalServerError = "サーバーでエラーが発生しています"
 )
 
 func main() {
@@ -117,6 +118,10 @@ func hdl(c echo.Context) error {
 				ErrorMessage: err.Error(),
 			})
 			continue
+		}
+
+		if err = hand.Create(); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
 		}
 
 		hand.EvaluatedHand = evaluated_hand
@@ -438,4 +443,19 @@ func checkDuplication(cards []Card) bool {
 	}
 
 	return false
+}
+
+func (hand *Hand) Create() (err error) {
+	statement := `
+	INSERT INTO hands_request (request_id, hand, result, timestamp)
+	VALUES ($1, $2, $3, now())`
+
+	stmt, err := Db.Prepare(statement)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+	err = stmt.QueryRow(hand.RequetId, hand.Hand, hand.EvaluatedHand).Scan()
+	return err
 }
