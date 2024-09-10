@@ -62,6 +62,7 @@ func hdl(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
 	}
 
+	var err error
 	var errors []Error
 	var strongest_point int
 	var index_strongest_hands []int
@@ -74,7 +75,7 @@ func hdl(c echo.Context) error {
 		hand := getHand(*req, i)
 
 		// 役判定
-		evaluated_hand, err := evaluateHand(hand.Cards)
+		hand.EvaluatedHand, err = evaluateHand(hand.Cards)
 		if err != nil {
 			errors = append(errors, Error{
 				RequestId:    hand.RequestId,
@@ -84,7 +85,6 @@ func hdl(c echo.Context) error {
 			continue
 		}
 
-		hand.EvaluatedHand = evaluated_hand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
 		// 最も強い役のインデックスを収集
