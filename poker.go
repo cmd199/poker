@@ -70,23 +70,8 @@ func hdl(c echo.Context) error {
 
 	// 役の判定
 	for i := 0; i < len(req.Hands); i++ {
-		// IDと手札の割り振り
-		hand := Hand{
-			RequestId: fmt.Sprintf("01-00002-%02d", i+1),
-			Hand:      req.Hands[i],
-		}
-
-		// 手札をカード配列に分割
-		cards := strings.Split(hand.Hand, ", ")
-
-		// スーツとランクの受け取り
-		hand.Cards = make([]Card, len(cards))
-		for j, card := range cards {
-			if card != "" {
-				hand.Cards[j].Suit = string(card[0])
-				hand.Cards[j].Rank, _ = strconv.Atoi(card[1:])
-			}
-		}
+		// Hand構造体の作成
+		hand := getHand(*req, i)
 
 		// 役判定
 		evaluated_hand, err := evaluateHand(hand.Cards)
@@ -129,6 +114,32 @@ func hdl(c echo.Context) error {
 		Results: correct_hand,
 		Errors:  errors,
 	})
+}
+
+func getId(i int) string {
+	return fmt.Sprintf("01-00002-%02d", i+1)
+}
+
+func getCards(hand Hand) []Card {
+	cards := strings.Split(hand.Hand, ", ")
+	hand.Cards = make([]Card, len(cards))
+	for j, card := range cards {
+		if card != "" {
+			hand.Cards[j].Suit = string(card[0])
+			hand.Cards[j].Rank, _ = strconv.Atoi(card[1:])
+		}
+	}
+	return hand.Cards
+}
+
+func getHand(req Request, i int) Hand {
+	hand := Hand{
+		RequestId: getId(i),
+		Hand:      req.Hands[i],
+	}
+	hand.Cards = getCards(hand)
+
+	return hand
 }
 
 func getSuits(cards []Card) []string {
