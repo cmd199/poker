@@ -120,12 +120,12 @@ func hdl(c echo.Context) error {
 			continue
 		}
 
+		hand.EvaluatedHand = evaluated_hand
+		hand.Point = givePoint(hand.EvaluatedHand)
+
 		if err = hand.Create(); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
 		}
-
-		hand.EvaluatedHand = evaluated_hand
-		hand.Point = givePoint(hand.EvaluatedHand)
 
 		// 最も強い役のインデックスを収集
 		if hand.Point == strongest_point {
@@ -456,6 +456,7 @@ func (hand *Hand) Create() (err error) {
 	}
 
 	defer stmt.Close()
-	err = stmt.QueryRow(hand.RequetId, hand.Hand, hand.EvaluatedHand).Scan()
+
+	_, err = stmt.Exec(hand.RequetId, hand.Hand, hand.EvaluatedHand)
 	return err
 }
