@@ -63,7 +63,7 @@ func hdl(c echo.Context) error {
 	}
 
 	var err error
-	var errors []ErrorHand
+	var error_hands []ErrorHand
 	var strongest_point int
 	var index_strongest_hands []int
 	var strongest_rank []int
@@ -77,7 +77,7 @@ func hdl(c echo.Context) error {
 		// 役判定
 		hand.EvaluatedHand, err = evaluateHand(hand.Cards)
 		if err != nil {
-			errors = append(errors, ErrorHand{
+			error_hands = append(error_hands, ErrorHand{
 				RequestId:    hand.RequestId,
 				Hand:         hand.Hand,
 				ErrorMessage: err.Error(),
@@ -112,7 +112,7 @@ func hdl(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{
 		Results: correct_hand,
-		Errors:  errors,
+		Errors:  error_hands,
 	})
 }
 
