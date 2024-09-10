@@ -25,15 +25,15 @@ type Hand struct {
 	StrongestRank int    `json:"-"`
 }
 
-type Error struct {
+type ErrorHand struct {
 	RequestId    string `json:"requestId"`
 	Hand         string `json:"hand"`
 	ErrorMessage string `json:"errorMessage"`
 }
 
 type Response struct {
-	Results []Hand  `json:"results"`
-	Errors  []Error `json:"errors"`
+	Results []Hand      `json:"results"`
+	Errors  []ErrorHand `json:"errors"`
 }
 
 type Card struct {
@@ -63,7 +63,7 @@ func hdl(c echo.Context) error {
 	}
 
 	var err error
-	var errors []Error
+	var errors []ErrorHand
 	var strongest_point int
 	var index_strongest_hands []int
 	var strongest_rank []int
@@ -77,7 +77,7 @@ func hdl(c echo.Context) error {
 		// 役判定
 		hand.EvaluatedHand, err = evaluateHand(hand.Cards)
 		if err != nil {
-			errors = append(errors, Error{
+			errors = append(errors, ErrorHand{
 				RequestId:    hand.RequestId,
 				Hand:         hand.Hand,
 				ErrorMessage: err.Error(),
