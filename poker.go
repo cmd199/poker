@@ -56,12 +56,6 @@ func main() {
 }
 
 func hdl(c echo.Context) error {
-
-	req := new(Request)
-	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
-	}
-
 	var err error
 	var error_hands []ErrorHand
 	var strongest_point int
@@ -69,12 +63,14 @@ func hdl(c echo.Context) error {
 	var strongest_rank []int
 	var correct_hand []Hand
 
+	req := new(Request)
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
+	}
+
 	// 役の判定
 	for i := 0; i < len(req.Hands); i++ {
-		// Hand構造体の作成
 		hand := getHand(*req, i)
-
-		// 役判定
 		hand.EvaluatedHand, err = evaluateHand(hand.Cards)
 		if err != nil {
 			error_hands = append(error_hands, ErrorHand{
@@ -138,7 +134,6 @@ func getHand(req Request, i int) Hand {
 		Hand:      req.Hands[i],
 	}
 	hand.Cards = getCards(hand)
-
 	return hand
 }
 
@@ -316,6 +311,23 @@ func givePoint(evaluated_hand string) int {
 	}
 	return 1
 }
+
+// func getStrongestIndex(hand Hand) ([]int, []int) {
+// 	var strongest_point int
+// 	var index_strongest_hands []int
+// 	var strongest_rank []int
+// 	var correct_hand []int
+
+// 	if hand.Point == strongest_point {
+// 		index_strongest_hands = append(index_strongest_hands, len(correct_hand))
+// 		strongest_rank = append(strongest_rank, getStrongestRank(hand.Cards, hand.Point))
+// 	} else if strongest_point < hand.Point {
+// 		strongest_point = hand.Point
+// 		index_strongest_hands = []int{len(correct_hand)}
+// 		strongest_rank = []int{getStrongestRank(hand.Cards, hand.Point)}
+// 	}
+// 	return index_strongest_hands, strongest_rank
+// }
 
 func getStrongestRank(cards []Card, strongest_point int) int {
 	var strongest_rank int
