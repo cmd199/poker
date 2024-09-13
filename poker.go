@@ -17,7 +17,7 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("postgres", "user=hoge dbname=hand_request password=hoge sslmode=disable")
+	Db, err = sql.Open("postgres", "host=172.17.0.2 port=5432 user=postgres dbname=poker_db password=mysecretpassword sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -84,10 +84,10 @@ func hdl(c echo.Context) error {
 	}
 
 	var errors []Error
-	var strongest_point int
-	var index_strongest_hands []int
-	var strongest_rank []int
-	var correct_hand []Hand
+	var strongestPoint int
+	var indexStrongestHands []int
+	var strongestRank []int
+	var correctHand []Hand
 
 	// 役の判定
 	for i := 0; i < len(req.Hands); i++ {
@@ -110,7 +110,7 @@ func hdl(c echo.Context) error {
 		}
 
 		// 役判定
-		evaluated_hand, err := evaluateHand(hand.Cards)
+		evaluatedHand, err := evaluateHand(hand.Cards)
 		if err != nil {
 			errors = append(errors, Error{
 				RequestId:    hand.RequetId,
@@ -120,38 +120,38 @@ func hdl(c echo.Context) error {
 			continue
 		}
 
-		hand.EvaluatedHand = evaluated_hand
+		hand.EvaluatedHand = evaluatedHand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
-		if err = hand.Create(); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
-		}
+		// if err = hand.Create(); err != nil {
+		// 	return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
+		// }
 
 		// 最も強い役のインデックスを収集
-		if hand.Point == strongest_point {
-			index_strongest_hands = append(index_strongest_hands, len(correct_hand))
-			strongest_rank = append(strongest_rank, getStrongestRank(hand.Cards, hand.Point))
-		} else if strongest_point < hand.Point {
-			strongest_point = hand.Point
-			index_strongest_hands = []int{len(correct_hand)}
-			strongest_rank = []int{getStrongestRank(hand.Cards, hand.Point)}
+		if hand.Point == strongestPoint {
+			indexStrongestHands = append(indexStrongestHands, len(correctHand))
+			strongestRank = append(strongestRank, getStrongestRank(hand.Cards, hand.Point))
+		} else if strongestPoint < hand.Point {
+			strongestPoint = hand.Point
+			indexStrongestHands = []int{len(correctHand)}
+			strongestRank = []int{getStrongestRank(hand.Cards, hand.Point)}
 		}
 
-		correct_hand = append(correct_hand, hand)
+		correctHand = append(correctHand, hand)
 	}
 
 	// 強さ判定
-	for i := 0; i < len(index_strongest_hands); i++ {
-		hand_index := index_strongest_hands[i]
-		if strongest_rank[i] == slices.Max(strongest_rank) {
-			correct_hand[hand_index].Strongest = true
+	for i := 0; i < len(indexStrongestHands); i++ {
+		handIndex := indexStrongestHands[i]
+		if strongestRank[i] == slices.Max(strongestRank) {
+			correctHand[handIndex].Strongest = true
 		} else {
-			correct_hand[hand_index].Strongest = false
+			correctHand[handIndex].Strongest = false
 		}
 	}
 
 	return c.JSON(http.StatusOK, Response{
-		Results: correct_hand,
+		Results: correctHand,
 		Errors:  errors,
 	})
 }
@@ -175,32 +175,32 @@ func getRanks(cards []Card) []int {
 }
 
 func isSingleSuits(suits []string) bool {
-	copy_suits := make([]string, len(suits))
-	copy(copy_suits, suits)
-	unique_suits := slices.Compact(copy_suits)
+	copySuits := make([]string, len(suits))
+	copy(copySuits, suits)
+	uniqueSuits := slices.Compact(copySuits)
 
-	return len(unique_suits) == 1
+	return len(uniqueSuits) == 1
 }
 
 func makeUniqueRanks(ranks []int) []int {
-	copy_ranks := make([]int, len(ranks))
-	copy(copy_ranks, ranks)
-	unique_ranks := slices.Compact(copy_ranks)
-	return unique_ranks
+	copyRanks := make([]int, len(ranks))
+	copy(copyRanks, ranks)
+	uniqueRanks := slices.Compact(copyRanks)
+	return uniqueRanks
 }
 
 func groupRanks(ranks []int) [][]int {
-	unique_ranks := makeUniqueRanks(ranks)
-	grouped_ranks := make([][]int, len(makeUniqueRanks(ranks)))
+	uniqueRanks := makeUniqueRanks(ranks)
+	groupedRanks := make([][]int, len(makeUniqueRanks(ranks)))
 
-	for i := 0; i < len(unique_ranks); i++ {
+	for i := 0; i < len(uniqueRanks); i++ {
 		for j := 0; j < len(ranks); j++ {
-			if unique_ranks[i] == ranks[j] {
-				grouped_ranks[i] = append(grouped_ranks[i], unique_ranks[i])
+			if uniqueRanks[i] == ranks[j] {
+				groupedRanks[i] = append(groupedRanks[i], uniqueRanks[i])
 			}
 		}
 	}
-	return grouped_ranks
+	return groupedRanks
 }
 
 func evaluateHand(cards []Card) (string, error) {
@@ -227,10 +227,10 @@ func evaluateHand(cards []Card) (string, error) {
 		}
 	}
 
-	unique_ranks := makeUniqueRanks(ranks)
-	grouped_ranks := groupRanks(ranks)
+	uniqueRanks := makeUniqueRanks(ranks)
+	groupedRanks := groupRanks(ranks)
 
-	switch len(unique_ranks) {
+	switch len(uniqueRanks) {
 	case 5:
 		if isRoyalStraightFlush(suits, ranks) {
 			return "ロイヤルストレートフラッシュ", nil
@@ -246,15 +246,15 @@ func evaluateHand(cards []Card) (string, error) {
 	case 4:
 		return "ワンペア", nil
 	case 3:
-		if len(grouped_ranks[0]) == 3 || len(grouped_ranks[1]) == 3 || len(grouped_ranks[2]) == 3 {
+		if len(groupedRanks[0]) == 3 || len(groupedRanks[1]) == 3 || len(groupedRanks[2]) == 3 {
 			return "スリーカード", nil
-		} else if len(grouped_ranks[0]) == 2 || len(grouped_ranks[1]) == 2 || len(grouped_ranks[2]) == 2 {
+		} else if len(groupedRanks[0]) == 2 || len(groupedRanks[1]) == 2 || len(groupedRanks[2]) == 2 {
 			return "ツーペア", nil
 		}
 	case 2:
-		if len(grouped_ranks[0]) == 4 || len(grouped_ranks[1]) == 4 {
+		if len(groupedRanks[0]) == 4 || len(groupedRanks[1]) == 4 {
 			return "フォーカード", nil
-		} else if len(grouped_ranks[0]) == 3 || len(grouped_ranks[1]) == 3 {
+		} else if len(groupedRanks[0]) == 3 || len(groupedRanks[1]) == 3 {
 			return "フルハウス", nil
 		}
 	case 1:
@@ -265,48 +265,48 @@ func evaluateHand(cards []Card) (string, error) {
 }
 
 func isRoyalStraightFlush(suits []string, ranks []int) bool {
-	is_flush := isSingleSuits(suits)
-	is_royal_straight := isRoyalStraight(ranks)
+	isFlush := isSingleSuits(suits)
+	isRoyalStraight := isRoyalStraight(ranks)
 
-	if is_flush && is_royal_straight {
+	if isFlush && isRoyalStraight {
 		return true
 	}
 	return false
 }
 
 func isStraightFlush(suits []string, ranks []int) bool {
-	is_flush := isSingleSuits(suits)
-	is_straight := isStraight(ranks)
+	isFlush := isSingleSuits(suits)
+	isStraight := isStraight(ranks)
 
-	if is_flush && is_straight {
+	if isFlush && isStraight {
 		return true
 	}
 	return false
 }
 
 func isStraight(ranks []int) bool {
-	unique_ranks := makeUniqueRanks(ranks)
-	is_straight := false
+	uniqueRanks := makeUniqueRanks(ranks)
+	isStraight := false
 
-	if slices.Max(unique_ranks)-slices.Min(unique_ranks) == 4 {
-		is_straight = true
+	if slices.Max(uniqueRanks)-slices.Min(uniqueRanks) == 4 {
+		isStraight = true
 	}
-	return is_straight
+	return isStraight
 }
 
 func isRoyalStraight(ranks []int) bool {
-	unique_ranks := makeUniqueRanks(ranks)
-	royal_straight := []int{1, 10, 11, 12, 13}
-	is_royal_straight := false
+	uniqueRanks := makeUniqueRanks(ranks)
+	royalStraight := []int{1, 10, 11, 12, 13}
+	isRoyalStraight := false
 
-	if slices.Equal(unique_ranks, royal_straight) {
-		is_royal_straight = true
+	if slices.Equal(uniqueRanks, royalStraight) {
+		isRoyalStraight = true
 	}
-	return is_royal_straight
+	return isRoyalStraight
 }
 
-func givePoint(evaluated_hand string) int {
-	switch evaluated_hand {
+func givePoint(evaluatedHand string) int {
+	switch evaluatedHand {
 	case "ロイヤルストレートフラッシュ":
 		return 10
 	case "ストレートフラッシュ":
@@ -331,42 +331,42 @@ func givePoint(evaluated_hand string) int {
 	return 1
 }
 
-func getStrongestRank(cards []Card, strongest_point int) int {
-	var strongest_rank int
+func getStrongestRank(cards []Card, strongestPoint int) int {
+	var strongestRank int
 	ranks := getRanks(cards)
-	grouped_ranks := groupRanks(ranks)
+	groupedRanks := groupRanks(ranks)
 
-	switch strongest_point {
+	switch strongestPoint {
 
 	case 2:
-		for i := 0; i < len(grouped_ranks); i++ {
-			if len(grouped_ranks[i]) == 2 {
-				if grouped_ranks[i][0] == 1 {
-					strongest_rank = 14
-				} else if strongest_rank <= grouped_ranks[i][0] {
-					strongest_rank = grouped_ranks[i][0]
+		for i := 0; i < len(groupedRanks); i++ {
+			if len(groupedRanks[i]) == 2 {
+				if groupedRanks[i][0] == 1 {
+					strongestRank = 14
+				} else if strongestRank <= groupedRanks[i][0] {
+					strongestRank = groupedRanks[i][0]
 				}
 			}
 		}
 
 	case 3:
-		for i := 0; i < len(grouped_ranks); i++ {
-			if len(grouped_ranks[i]) == 2 {
-				if grouped_ranks[i][0] == 1 {
-					strongest_rank = 14
-				} else if strongest_rank <= grouped_ranks[i][0] {
-					strongest_rank = grouped_ranks[i][0]
+		for i := 0; i < len(groupedRanks); i++ {
+			if len(groupedRanks[i]) == 2 {
+				if groupedRanks[i][0] == 1 {
+					strongestRank = 14
+				} else if strongestRank <= groupedRanks[i][0] {
+					strongestRank = groupedRanks[i][0]
 				}
 			}
 		}
 
 	case 4:
-		for i := 0; i < len(grouped_ranks); i++ {
-			if len(grouped_ranks[i]) == 3 {
-				if grouped_ranks[i][0] == 1 {
-					strongest_rank = 14
-				} else if strongest_rank <= grouped_ranks[i][0] {
-					strongest_rank = grouped_ranks[i][0]
+		for i := 0; i < len(groupedRanks); i++ {
+			if len(groupedRanks[i]) == 3 {
+				if groupedRanks[i][0] == 1 {
+					strongestRank = 14
+				} else if strongestRank <= groupedRanks[i][0] {
+					strongestRank = groupedRanks[i][0]
 				}
 			}
 		}
@@ -374,39 +374,39 @@ func getStrongestRank(cards []Card, strongest_point int) int {
 	case 5:
 		for i := 0; i < len(ranks); i++ {
 			if isRoyalStraight(ranks) {
-				strongest_rank = 14
-			} else if strongest_rank <= ranks[i] {
-				strongest_rank = ranks[i]
+				strongestRank = 14
+			} else if strongestRank <= ranks[i] {
+				strongestRank = ranks[i]
 			}
 		}
 
 	case 6:
 		for i := 0; i < len(ranks); i++ {
 			if ranks[i] == 1 {
-				strongest_rank = 14
-			} else if strongest_rank <= ranks[i] {
-				strongest_rank = ranks[i]
+				strongestRank = 14
+			} else if strongestRank <= ranks[i] {
+				strongestRank = ranks[i]
 			}
 		}
 
 	case 7:
-		for i := 0; i < len(grouped_ranks); i++ {
-			if len(grouped_ranks[i]) == 3 {
-				if grouped_ranks[i][0] == 1 {
-					strongest_rank = 14
-				} else if strongest_rank <= grouped_ranks[i][0] {
-					strongest_rank = grouped_ranks[i][0]
+		for i := 0; i < len(groupedRanks); i++ {
+			if len(groupedRanks[i]) == 3 {
+				if groupedRanks[i][0] == 1 {
+					strongestRank = 14
+				} else if strongestRank <= groupedRanks[i][0] {
+					strongestRank = groupedRanks[i][0]
 				}
 			}
 		}
 
 	case 8:
-		for i := 0; i < len(grouped_ranks); i++ {
-			if len(grouped_ranks[i]) == 4 {
-				if grouped_ranks[i][0] == 1 {
-					strongest_rank = 14
-				} else if strongest_rank <= grouped_ranks[i][0] {
-					strongest_rank = grouped_ranks[i][0]
+		for i := 0; i < len(groupedRanks); i++ {
+			if len(groupedRanks[i]) == 4 {
+				if groupedRanks[i][0] == 1 {
+					strongestRank = 14
+				} else if strongestRank <= groupedRanks[i][0] {
+					strongestRank = groupedRanks[i][0]
 				}
 			}
 		}
@@ -414,23 +414,23 @@ func getStrongestRank(cards []Card, strongest_point int) int {
 	case 9:
 		for i := 0; i < len(ranks); i++ {
 			if isRoyalStraight(ranks) {
-				strongest_rank = 14
-			} else if strongest_rank <= ranks[i] {
-				strongest_rank = ranks[i]
+				strongestRank = 14
+			} else if strongestRank <= ranks[i] {
+				strongestRank = ranks[i]
 			}
 		}
 
 	case 1:
 		for i := 0; i < len(ranks); i++ {
 			if ranks[i] == 1 {
-				strongest_rank = 14
-			} else if strongest_rank <= ranks[i] {
-				strongest_rank = ranks[i]
+				strongestRank = 14
+			} else if strongestRank <= ranks[i] {
+				strongestRank = ranks[i]
 			}
 		}
 	}
 
-	return strongest_rank
+	return strongestRank
 }
 
 func checkDuplication(cards []Card) bool {
@@ -445,18 +445,18 @@ func checkDuplication(cards []Card) bool {
 	return false
 }
 
-func (hand *Hand) Create() (err error) {
-	statement := `
-	INSERT INTO hands_request (request_id, hand, result, timestamp)
-	VALUES ($1, $2, $3, now())`
+// func (hand *Hand) Create() (err error) {
+// 	statement := `
+// 	INSERT INTO hands_request (request_id, hand, result, timestamp)
+// 	VALUES ($1, $2, $3, now())`
 
-	stmt, err := Db.Prepare(statement)
-	if err != nil {
-		return err
-	}
+// 	stmt, err := Db.Prepare(statement)
+// 	if err != nil {
+// 		return err
+// 	}
 
-	defer stmt.Close()
+// 	defer stmt.Close()
 
-	_, err = stmt.Exec(hand.RequetId, hand.Hand, hand.EvaluatedHand)
-	return err
-}
+// 	_, err = stmt.Exec(hand.RequetId, hand.Hand, hand.EvaluatedHand)
+// 	return err
+// }
