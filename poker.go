@@ -445,18 +445,18 @@ func checkDuplication(cards []Card) bool {
 	return false
 }
 
-// func (hand *Hand) Create() (err error) {
-// 	statement := `
-// 	INSERT INTO hands_request (request_id, hand, result, timestamp)
-// 	VALUES ($1, $2, $3, now())`
+func (hand *Hand) Create() (err error) {
+	statement := `
+	INSERT INTO hands_request (request_id, hand, result, timestamp)
+	VALUES ($1, $2, $3, now())`
 
-// 	stmt, err := Db.Prepare(statement)
-// 	if err != nil {
-// 		return err
-// 	}
+	stmt, err := Db.Prepare(statement)
+	if err != nil {
+		return err
+	}
 
-// 	defer stmt.Close()
+	defer stmt.Close()
 
-// 	_, err = stmt.Exec(hand.RequetId, hand.Hand, hand.EvaluatedHand)
-// 	return err
-// }
+	_, err = stmt.Exec(hand.RequetId, hand.Hand, hand.EvaluatedHand)
+	return err
+}
