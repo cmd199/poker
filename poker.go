@@ -72,7 +72,7 @@ const (
 
 func main() {
 	e := echo.New()
-	e.POST("/", hdl)
+	e.POST("/results", hdl)
 	e.Logger.Fatal(e.Start(":8080"))
 }
 
