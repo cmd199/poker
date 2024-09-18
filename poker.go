@@ -29,6 +29,26 @@ func init() {
 	} else {
 		fmt.Println("接続成功")
 	}
+
+	// テーブル作成のクエリ
+	createTableQuery := `
+	CREATE TABLE IF NOT EXISTS poker_results (
+		id SERIAL PRIMARY KEY,
+		request_id VARCHAR(255),
+		hand VARCHAR(255),
+		result VARCHAR(255),
+		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	// テーブル作成実行
+	_, err = Db.Exec(createTableQuery)
+	if err != nil {
+		fmt.Println("テーブル作成失敗:", err)
+		return
+	} else {
+		fmt.Println("テーブル作成成功")
+	}
+
 }
 
 type Request struct {
