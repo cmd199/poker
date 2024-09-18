@@ -4,11 +4,14 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	_ "github.com/lib/pq"
 )
@@ -17,10 +20,28 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("postgres", "host=db port=5432 user=postgres dbname=poker_db password=mysecretpassword sslmode=disable")
+
+	// .envファイルから環境変数を読み込む
+	err = godotenv.Load()
 	if err != nil {
-		fmt.Println("DB接続エラー:", err)
-		return
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// 環境変数からデータベース接続情報を取得
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	// データベース接続文字列を作成
+	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+		host, port, user, dbname, password)
+
+	// データベースに接続
+	Db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
 	}
 
 	err = Db.Ping()
@@ -144,9 +165,9 @@ func hdl(c echo.Context) error {
 		hand.EvaluatedHand = evaluatedHand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
-		// if err = hand.Create(); err != nil {
-		// 	return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
-		// }
+		if err = hand.Create(); err != nil {
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
+		}
 
 		// 最も強い役のインデックスを収集
 		if hand.Point == strongestPoint {
@@ -468,7 +489,7 @@ func checkDuplication(cards []Card) bool {
 
 func (hand *Hand) Create() (err error) {
 	statement := `
-	INSERT INTO hands_request (request_id, hand, result, timestamp)
+	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
 
 	stmt, err := Db.Prepare(statement)
