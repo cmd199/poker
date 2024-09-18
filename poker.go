@@ -78,7 +78,7 @@ type Request struct {
 }
 
 type Hand struct {
-	RequetId      string `json:"requestId"`
+	RequestId     string `json:"requestId"`
 	Hand          string `json:"hand"`
 	EvaluatedHand string `json:"yaku"`
 	Strongest     bool   `json:"strongest"`
@@ -135,8 +135,8 @@ func hdl(c echo.Context) error {
 	for i := 0; i < len(req.Hands); i++ {
 		// IDと手札の割り振り
 		hand := Hand{
-			RequetId: fmt.Sprintf("01-00002-%02d", i+1),
-			Hand:     req.Hands[i],
+			RequestId: fmt.Sprintf("01-00002-%02d", i+1),
+			Hand:      req.Hands[i],
 		}
 
 		// 手札をカード配列に分割
@@ -155,7 +155,7 @@ func hdl(c echo.Context) error {
 		evaluatedHand, err := evaluateHand(hand.Cards)
 		if err != nil {
 			errors = append(errors, Error{
-				RequestId:    hand.RequetId,
+				RequestId:    hand.RequestId,
 				Hand:         hand.Hand,
 				ErrorMessage: err.Error(),
 			})
@@ -499,6 +499,6 @@ func (hand *Hand) Create() (err error) {
 
 	defer stmt.Close()
 
-	_, err = stmt.Exec(hand.RequetId, hand.Hand, hand.EvaluatedHand)
+	_, err = stmt.Exec(hand.RequestId, hand.Hand, hand.EvaluatedHand)
 	return err
 }
