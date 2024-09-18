@@ -19,7 +19,8 @@ func init() {
 	var err error
 	Db, err = sql.Open("postgres", "host=db port=5432 user=postgres dbname=poker_db password=mysecretpassword sslmode=disable")
 	if err != nil {
-		panic(err)
+		fmt.Println("DB接続エラー:", err)
+		return
 	}
 
 	err = Db.Ping()
