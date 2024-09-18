@@ -17,7 +17,7 @@ var Db *sql.DB
 
 func init() {
 	var err error
-	Db, err = sql.Open("postgres", "host=172.17.0.2 port=5432 user=postgres dbname=poker_db password=mysecretpassword sslmode=disable")
+	Db, err = sql.Open("postgres", "host=db port=5432 user=postgres dbname=poker_db password=mysecretpassword sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
