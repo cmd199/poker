@@ -165,7 +165,7 @@ func hdl(c echo.Context) error {
 		hand.EvaluatedHand = evaluatedHand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
-		if err = hand.Create(); err != nil {
+		if err = hand.Insert(); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
 		}
 
@@ -487,7 +487,7 @@ func checkDuplication(cards []Card) bool {
 	return false
 }
 
-func (hand *Hand) Create() (err error) {
+func (hand *Hand) Insert() (err error) {
 	statement := `
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
