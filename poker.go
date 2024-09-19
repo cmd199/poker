@@ -492,6 +492,8 @@ func (hand *Hand) Create() (err error) {
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
 
+	fmt.Printf("RequestId: %s, Hand: %s, EvaluatedHand: %s\n", hand.RequestId, hand.Hand, hand.EvaluatedHand)
+
 	stmt, err := Db.Prepare(statement)
 	if err != nil {
 		return err
@@ -499,6 +501,18 @@ func (hand *Hand) Create() (err error) {
 
 	defer stmt.Close()
 
-	_, err = stmt.Exec(hand.RequestId, hand.Hand, hand.EvaluatedHand)
-	return err
+	result, err := stmt.Exec(hand.RequestId, hand.Hand, hand.EvaluatedHand)
+	if err != nil {
+		log.Printf("Failed to execute insert statement: %v", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Failed to fetch affected rows: %v", err)
+		return err
+	}
+
+	fmt.Printf("Rows affected: %d\n", rowsAffected)
+	return nil
 }
