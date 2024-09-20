@@ -130,7 +130,7 @@ func hdl(c echo.Context) error {
 	var strongestPoint int
 	var indexStrongestHands []int
 	var strongestRank []int
-	var correctHand []Hand
+	var correctHands []Hand
 
 	// 役の判定
 	for i := 0; i < len(req.Hands); i++ {
@@ -173,29 +173,29 @@ func hdl(c echo.Context) error {
 
 		// 最も強い役のインデックスを収集
 		if hand.Point == strongestPoint {
-			indexStrongestHands = append(indexStrongestHands, len(correctHand))
+			indexStrongestHands = append(indexStrongestHands, len(correctHands))
 			strongestRank = append(strongestRank, getStrongestRank(hand.Cards, hand.Point))
 		} else if strongestPoint < hand.Point {
 			strongestPoint = hand.Point
-			indexStrongestHands = []int{len(correctHand)}
+			indexStrongestHands = []int{len(correctHands)}
 			strongestRank = []int{getStrongestRank(hand.Cards, hand.Point)}
 		}
 
-		correctHand = append(correctHand, hand)
+		correctHands = append(correctHands, hand)
 	}
 
 	// 強さ判定
 	for i := 0; i < len(indexStrongestHands); i++ {
 		handIndex := indexStrongestHands[i]
 		if strongestRank[i] == slices.Max(strongestRank) {
-			correctHand[handIndex].Strongest = true
+			correctHands[handIndex].Strongest = true
 		} else {
-			correctHand[handIndex].Strongest = false
+			correctHands[handIndex].Strongest = false
 		}
 	}
 
 	return c.JSON(http.StatusOK, Response{
-		Results: correctHand,
+		Results: correctHands,
 		Errors:  errHands,
 	})
 }
