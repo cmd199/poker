@@ -142,7 +142,7 @@ func hdl(c echo.Context) error {
 			}
 			errHands = append(errHands, errHand)
 
-			if err = errHand.InsertError(); err != nil {
+			if err = errHand.InsertErrorHand(); err != nil {
 				return c.JSON(http.StatusInternalServerError, map[string]string{"message": INTERNAL_SERVER_ERROR})
 			}
 			continue
@@ -151,7 +151,7 @@ func hdl(c echo.Context) error {
 		hand.EvaluatedHand = evaluatedHand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
-		if err = hand.InsertCorrect(); err != nil {
+		if err = hand.InsertCorrectHand(); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": INTERNAL_SERVER_ERROR})
 		}
 
@@ -537,7 +537,7 @@ func createTabe(Db *sql.DB) error {
 	}
 }
 
-func (hand *Hand) InsertCorrect() (err error) {
+func (hand *Hand) InsertCorrectHand() (err error) {
 	statement := `
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
@@ -567,7 +567,7 @@ func (hand *Hand) InsertCorrect() (err error) {
 	return nil
 }
 
-func (errHand *Error) InsertError() (err error) {
+func (errHand *Error) InsertErrorHand() (err error) {
 	statement := `
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
