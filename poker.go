@@ -21,39 +21,13 @@ var Db *sql.DB
 func init() {
 	var err error
 
-	// .envファイルから環境変数を読み込む
-	err = godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-
-	// 環境変数からデータベース接続情報を取得
-	host := os.Getenv("DB_HOST")
-	port := os.Getenv("DB_PORT")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-
-	// データベース接続文字列を作成
-	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
-		host, port, user, dbname, password)
-
-	// データベースに接続
-	Db, err = sql.Open("postgres", connStr)
-	if err != nil {
+	// DBに接続
+	if Db, err = connectDB(); err != nil {
 		panic(err)
 	}
 
-	err = Db.Ping()
-	if err != nil {
-		fmt.Println(CONECTION_FAILURE)
-		return
-	} else {
-		fmt.Println(CONNECTION_SUCCESSFUL)
-	}
-
 	// テーブル作成
-	if err = CreateTabe(Db); err != nil {
+	if err = createTabe(Db); err != nil {
 		panic(err)
 	}
 }
@@ -495,6 +469,70 @@ func checkDuplication(cards []Card) bool {
 	return false
 }
 
+func connectDB() (*sql.DB, error) {
+	// 接続情報の取得
+	connStr := getConnectInfo()
+
+	// データベースに接続
+	var err error
+	Db, err = sql.Open("postgres", connStr)
+	if err != nil {
+		panic(err)
+	}
+
+	err = Db.Ping()
+	if err != nil {
+		fmt.Println(CONECTION_FAILURE)
+		return nil, err
+	} else {
+		fmt.Println(CONNECTION_SUCCESSFUL)
+		return Db, nil
+	}
+}
+
+func getConnectInfo() string {
+	// .envファイルから環境変数を読み込む
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
+
+	// 環境変数から接続情報を取得
+	host := os.Getenv("DB_HOST")
+	port := os.Getenv("DB_PORT")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+
+	// 接続用の文字列を作成
+	connStr := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=disable",
+		host, port, user, dbname, password)
+
+	return connStr
+}
+
+func createTabe(Db *sql.DB) error {
+	// テーブル作成のクエリ
+	createTableQuery := `
+	CREATE TABLE IF NOT EXISTS poker_results (
+		id SERIAL PRIMARY KEY,
+		request_id VARCHAR(255),
+		hand VARCHAR(255),
+		result VARCHAR(255),
+		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	// テーブル作成実行
+	_, err := Db.Exec(createTableQuery)
+	if err != nil {
+		fmt.Println(TABLE_CREATION_FAILURE)
+		return err
+	} else {
+		fmt.Println(TABLE_CREATION_SUCCESSFUL)
+		return nil
+	}
+}
+
 func (hand *Hand) Insert() (err error) {
 	statement := `
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
@@ -523,26 +561,4 @@ func (hand *Hand) Insert() (err error) {
 
 	fmt.Printf("Rows affected: %d\n", rowsAffected)
 	return nil
-}
-
-func CreateTabe(Db *sql.DB) error {
-	// テーブル作成のクエリ
-	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS poker_results (
-		id SERIAL PRIMARY KEY,
-		request_id VARCHAR(255),
-		hand VARCHAR(255),
-		result VARCHAR(255),
-		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);`
-
-	// テーブル作成実行
-	_, err := Db.Exec(createTableQuery)
-	if err != nil {
-		fmt.Println(TABLE_CREATION_FAILURE)
-		return err
-	} else {
-		fmt.Println(TABLE_CREATION_SUCCESSFUL)
-		return nil
-	}
 }
