@@ -46,10 +46,10 @@ func init() {
 
 	err = Db.Ping()
 	if err != nil {
-		fmt.Println("接続失敗")
+		fmt.Println(CONECTION_FAILURE)
 		return
 	} else {
-		fmt.Println("接続成功")
+		fmt.Println(CONNECTION_SUCCESSFUL)
 	}
 
 	// テーブル作成のクエリ
@@ -65,10 +65,10 @@ func init() {
 	// テーブル作成実行
 	_, err = Db.Exec(createTableQuery)
 	if err != nil {
-		fmt.Println("テーブル作成失敗:", err)
+		fmt.Println(TABLE_CREATION_FAILURE, err)
 		return
 	} else {
-		fmt.Println("テーブル作成成功")
+		fmt.Println(TABLE_CREATION_SUCCESSFUL)
 	}
 
 }
@@ -104,12 +104,33 @@ type Card struct {
 }
 
 const (
-	InvalidFormat       = "不正なフォーマットです"
-	InvalidHandLength   = "手札は5枚入力してください"
-	InvalidCard         = "不正なカードが含まれています"
-	InvalidSameRank     = "同じランクのカードは最大で4枚までです"
-	InvalidSameCards    = "同じカードを2回以上入力しています"
-	InternalServerError = "サーバーでエラーが発生しています"
+	CONNECTION_SUCCESSFUL     = "接続成功"
+	CONECTION_FAILURE         = "接続失敗"
+	TABLE_CREATION_SUCCESSFUL = "テーブル作成成功"
+	TABLE_CREATION_FAILURE    = "テーブル作成失敗"
+	INTERNAL_SERVER_ERROR     = "サーバーでエラーが発生しています"
+
+	INVALID_FORMAT      = "不正なフォーマットです"
+	INVALID_HAND_LENGTH = "手札は5枚入力してください"
+	INVALID_CARD        = "不正なカードが含まれています"
+	INVALID_SAME_RANK   = "同じランクのカードは最大で4枚までです"
+	INVALID_SAME_CARDS  = "同じカードを2回以上入力しています"
+
+	ROYAL_STRAIGHT_FLUSH = "ロイヤルストレートフラッシュ"
+	STRAIGHT_FLUSH       = "ストレートフラッシュ"
+	FOUR_OF_A_KIND       = "フォーカード"
+	FULL_HOUSE           = "フルハウス"
+	FLUSH                = "フラッシュ"
+	STRAIGHT             = "ストレート"
+	THREE_OF_A_KIND      = "スリーカード"
+	TWO_PAIR             = "ツーペア"
+	ONE_PAIR             = "ワンペア"
+	HIGH_CARD            = "ハイカード"
+
+	SPADE   = "s"
+	HEART   = "h"
+	DIAMOND = "d"
+	CLUB    = "c"
 )
 
 func main() {
@@ -122,7 +143,7 @@ func hdl(c echo.Context) error {
 
 	req := new(Request)
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
+		return c.JSON(http.StatusBadRequest, map[string]string{"message": INVALID_FORMAT})
 	}
 
 	var errHand Error
@@ -168,7 +189,7 @@ func hdl(c echo.Context) error {
 		hand.Point = givePoint(hand.EvaluatedHand)
 
 		if err = hand.Insert(); err != nil {
-			return c.JSON(http.StatusInternalServerError, map[string]string{"message": InternalServerError})
+			return c.JSON(http.StatusInternalServerError, map[string]string{"message": INTERNAL_SERVER_ERROR})
 		}
 
 		// 最も強い役のインデックスを収集
@@ -250,10 +271,10 @@ func groupRanks(ranks []int) [][]int {
 func evaluateHand(cards []Card) (string, error) {
 
 	if len(cards) != 5 {
-		return "", errors.New(InvalidHandLength)
+		return "", errors.New(INVALID_HAND_LENGTH)
 	}
 	if checkDuplication(cards) {
-		return "", errors.New(InvalidSameCards)
+		return "", errors.New(INVALID_SAME_CARDS)
 	}
 
 	suits := getSuits(cards)
@@ -261,13 +282,13 @@ func evaluateHand(cards []Card) (string, error) {
 
 	for i := 0; i < len(cards); i++ {
 		if suits[i] == "" {
-			return "", errors.New(InvalidHandLength)
+			return "", errors.New(INVALID_HAND_LENGTH)
 		}
-		if !(suits[i] == "s" || suits[i] == "k" || suits[i] == "d" || suits[i] == "h") {
-			return "", errors.New(InvalidCard)
+		if !(suits[i] == SPADE || suits[i] == CLUB || suits[i] == DIAMOND || suits[i] == HEART) {
+			return "", errors.New(INVALID_CARD)
 		}
 		if !(1 <= ranks[i] && ranks[i] <= 13) {
-			return "", errors.New(InvalidCard)
+			return "", errors.New(INVALID_CARD)
 		}
 	}
 
@@ -277,35 +298,35 @@ func evaluateHand(cards []Card) (string, error) {
 	switch len(uniqueRanks) {
 	case 5:
 		if isRoyalStraightFlush(suits, ranks) {
-			return "ロイヤルストレートフラッシュ", nil
+			return ROYAL_STRAIGHT_FLUSH, nil
 		} else if isStraightFlush(suits, ranks) {
-			return "ストレートフラッシュ", nil
+			return STRAIGHT_FLUSH, nil
 		} else if isSingleSuits(suits) {
-			return "フラッシュ", nil
+			return FLUSH, nil
 		} else if isStraight(ranks) || isRoyalStraight(ranks) {
-			return "ストレート", nil
+			return STRAIGHT, nil
 		} else {
-			return "ハイカード", nil
+			return HIGH_CARD, nil
 		}
 	case 4:
-		return "ワンペア", nil
+		return ONE_PAIR, nil
 	case 3:
 		if len(groupedRanks[0]) == 3 || len(groupedRanks[1]) == 3 || len(groupedRanks[2]) == 3 {
-			return "スリーカード", nil
+			return THREE_OF_A_KIND, nil
 		} else if len(groupedRanks[0]) == 2 || len(groupedRanks[1]) == 2 || len(groupedRanks[2]) == 2 {
-			return "ツーペア", nil
+			return TWO_PAIR, nil
 		}
 	case 2:
 		if len(groupedRanks[0]) == 4 || len(groupedRanks[1]) == 4 {
-			return "フォーカード", nil
+			return FOUR_OF_A_KIND, nil
 		} else if len(groupedRanks[0]) == 3 || len(groupedRanks[1]) == 3 {
-			return "フルハウス", nil
+			return FULL_HOUSE, nil
 		}
 	case 1:
-		return "", errors.New(InvalidSameRank)
+		return "", errors.New(INVALID_SAME_RANK)
 	}
 
-	return "ハイカード", nil
+	return HIGH_CARD, nil
 }
 
 func isRoyalStraightFlush(suits []string, ranks []int) bool {
@@ -351,25 +372,25 @@ func isRoyalStraight(ranks []int) bool {
 
 func givePoint(evaluatedHand string) int {
 	switch evaluatedHand {
-	case "ロイヤルストレートフラッシュ":
+	case ROYAL_STRAIGHT_FLUSH:
 		return 10
-	case "ストレートフラッシュ":
+	case STRAIGHT_FLUSH:
 		return 9
-	case "フォーカード":
+	case FOUR_OF_A_KIND:
 		return 8
-	case "フルハウス":
+	case FULL_HOUSE:
 		return 7
-	case "フラッシュ":
+	case FLUSH:
 		return 6
-	case "ストレート":
+	case STRAIGHT:
 		return 5
-	case "スリーカード":
+	case THREE_OF_A_KIND:
 		return 4
-	case "ツーペア":
+	case TWO_PAIR:
 		return 3
-	case "ワンペア":
+	case ONE_PAIR:
 		return 2
-	case "ハイカード":
+	case HIGH_CARD:
 		return 1
 	}
 	return 1
