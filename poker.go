@@ -125,7 +125,8 @@ func hdl(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"message": InvalidFormat})
 	}
 
-	var errors []Error
+	var errHand Error
+	var errHands []Error
 	var strongestPoint int
 	var indexStrongestHands []int
 	var strongestRank []int
@@ -154,11 +155,12 @@ func hdl(c echo.Context) error {
 		// 役判定
 		evaluatedHand, err := evaluateHand(hand.Cards)
 		if err != nil {
-			errors = append(errors, Error{
+			errHand = Error{
 				RequestId:    hand.RequestId,
 				Hand:         hand.Hand,
 				ErrorMessage: err.Error(),
-			})
+			}
+			errHands = append(errHands, errHand)
 			continue
 		}
 
@@ -194,7 +196,7 @@ func hdl(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, Response{
 		Results: correctHand,
-		Errors:  errors,
+		Errors:  errHands,
 	})
 }
 
