@@ -141,13 +141,17 @@ func hdl(c echo.Context) error {
 				ErrorMessage: err.Error(),
 			}
 			errHands = append(errHands, errHand)
+
+			if err = errHand.InsertError(); err != nil {
+				return c.JSON(http.StatusInternalServerError, map[string]string{"message": INTERNAL_SERVER_ERROR})
+			}
 			continue
 		}
 
 		hand.EvaluatedHand = evaluatedHand
 		hand.Point = givePoint(hand.EvaluatedHand)
 
-		if err = hand.Insert(); err != nil {
+		if err = hand.InsertCorrect(); err != nil {
 			return c.JSON(http.StatusInternalServerError, map[string]string{"message": INTERNAL_SERVER_ERROR})
 		}
 
@@ -513,7 +517,7 @@ func getConnectInfo() string {
 
 func createTabe(Db *sql.DB) error {
 	// テーブル作成のクエリ
-	createTableQuery := `
+	tableCreateQuery := `
 	CREATE TABLE IF NOT EXISTS poker_results (
 		id SERIAL PRIMARY KEY,
 		request_id VARCHAR(255),
@@ -523,7 +527,7 @@ func createTabe(Db *sql.DB) error {
 	);`
 
 	// テーブル作成実行
-	_, err := Db.Exec(createTableQuery)
+	_, err := Db.Exec(tableCreateQuery)
 	if err != nil {
 		fmt.Println(TABLE_CREATION_FAILURE)
 		return err
@@ -533,7 +537,7 @@ func createTabe(Db *sql.DB) error {
 	}
 }
 
-func (hand *Hand) Insert() (err error) {
+func (hand *Hand) InsertCorrect() (err error) {
 	statement := `
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
@@ -548,6 +552,36 @@ func (hand *Hand) Insert() (err error) {
 	defer stmt.Close()
 
 	result, err := stmt.Exec(hand.RequestId, hand.Hand, hand.EvaluatedHand)
+	if err != nil {
+		log.Printf("Failed to execute insert statement: %v", err)
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("Failed to fetch affected rows: %v", err)
+		return err
+	}
+
+	fmt.Printf("Rows affected: %d\n", rowsAffected)
+	return nil
+}
+
+func (errHand *Error) InsertError() (err error) {
+	statement := `
+	INSERT INTO poker_results (request_id, hand, result, timestamp)
+	VALUES ($1, $2, $3, now())`
+
+	fmt.Printf("RequestId: %s, Hand: %s, ErrorMessage: %s\n", errHand.RequestId, errHand.Hand, errHand.ErrorMessage)
+
+	stmt, err := Db.Prepare(statement)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	result, err := stmt.Exec(errHand.RequestId, errHand.Hand, errHand.ErrorMessage)
 	if err != nil {
 		log.Printf("Failed to execute insert statement: %v", err)
 		return err
