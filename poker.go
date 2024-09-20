@@ -52,25 +52,10 @@ func init() {
 		fmt.Println(CONNECTION_SUCCESSFUL)
 	}
 
-	// テーブル作成のクエリ
-	createTableQuery := `
-	CREATE TABLE IF NOT EXISTS poker_results (
-		id SERIAL PRIMARY KEY,
-		request_id VARCHAR(255),
-		hand VARCHAR(255),
-		result VARCHAR(255),
-		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-	);`
-
-	// テーブル作成実行
-	_, err = Db.Exec(createTableQuery)
-	if err != nil {
-		fmt.Println(TABLE_CREATION_FAILURE, err)
-		return
-	} else {
-		fmt.Println(TABLE_CREATION_SUCCESSFUL)
+	// テーブル作成
+	if err = CreateTabe(Db); err != nil {
+		panic(err)
 	}
-
 }
 
 type Request struct {
@@ -538,4 +523,26 @@ func (hand *Hand) Insert() (err error) {
 
 	fmt.Printf("Rows affected: %d\n", rowsAffected)
 	return nil
+}
+
+func CreateTabe(Db *sql.DB) error {
+	// テーブル作成のクエリ
+	createTableQuery := `
+	CREATE TABLE IF NOT EXISTS poker_results (
+		id SERIAL PRIMARY KEY,
+		request_id VARCHAR(255),
+		hand VARCHAR(255),
+		result VARCHAR(255),
+		timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);`
+
+	// テーブル作成実行
+	_, err := Db.Exec(createTableQuery)
+	if err != nil {
+		fmt.Println(TABLE_CREATION_FAILURE)
+		return err
+	} else {
+		fmt.Println(TABLE_CREATION_SUCCESSFUL)
+		return nil
+	}
 }
