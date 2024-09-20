@@ -537,42 +537,18 @@ func createTabe(Db *sql.DB) error {
 	}
 }
 
-func (hand *Hand) InsertCorrectHand() (err error) {
-	statement := `
-	INSERT INTO poker_results (request_id, hand, result, timestamp)
-	VALUES ($1, $2, $3, now())`
-
-	fmt.Printf("RequestId: %s, Hand: %s, EvaluatedHand: %s\n", hand.RequestId, hand.Hand, hand.EvaluatedHand)
-
-	stmt, err := Db.Prepare(statement)
-	if err != nil {
-		return err
-	}
-
-	defer stmt.Close()
-
-	result, err := stmt.Exec(hand.RequestId, hand.Hand, hand.EvaluatedHand)
-	if err != nil {
-		log.Printf("Failed to execute insert statement: %v", err)
-		return err
-	}
-
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("Failed to fetch affected rows: %v", err)
-		return err
-	}
-
-	fmt.Printf("Rows affected: %d\n", rowsAffected)
-	return nil
+func (hand *Hand) InsertCorrectHand() error {
+	return insertResult(hand.RequestId, hand.Hand, hand.EvaluatedHand)
 }
 
-func (errHand *Error) InsertErrorHand() (err error) {
+func (errHand *Error) InsertErrorHand() error {
+	return insertResult(errHand.RequestId, errHand.Hand, errHand.ErrorMessage)
+}
+
+func insertResult(requestId string, hand string, result string) error {
 	statement := `
 	INSERT INTO poker_results (request_id, hand, result, timestamp)
 	VALUES ($1, $2, $3, now())`
-
-	fmt.Printf("RequestId: %s, Hand: %s, ErrorMessage: %s\n", errHand.RequestId, errHand.Hand, errHand.ErrorMessage)
 
 	stmt, err := Db.Prepare(statement)
 	if err != nil {
@@ -581,18 +557,11 @@ func (errHand *Error) InsertErrorHand() (err error) {
 
 	defer stmt.Close()
 
-	result, err := stmt.Exec(errHand.RequestId, errHand.Hand, errHand.ErrorMessage)
+	_, err = stmt.Exec(requestId, hand, result)
 	if err != nil {
 		log.Printf("Failed to execute insert statement: %v", err)
 		return err
 	}
 
-	rowsAffected, err := result.RowsAffected()
-	if err != nil {
-		log.Printf("Failed to fetch affected rows: %v", err)
-		return err
-	}
-
-	fmt.Printf("Rows affected: %d\n", rowsAffected)
 	return nil
 }
